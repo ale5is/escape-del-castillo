@@ -1,64 +1,116 @@
 using UnityEngine;
 
-public class enemigo : MonoBehaviour
+public class Enemigo : MonoBehaviour
 {
-    public float velocidad = 2f;
-    public Transform puntoIzquierda;
-    public Transform puntoDerecha;
+    [Header("Movimiento")]
+    [SerializeField] private float velocidad = 2f;
+    [SerializeField] private Transform puntoIzquierda;
+    [SerializeField] private Transform puntoDerecha;
 
-    public int daño = 1;
+    [Header("Daño")]
+    [SerializeField] private int daño = 1;
+    [SerializeField] private float tiempoEntreGolpes = 1f;
+
+    [Header("Componentes")]
+    [SerializeField] private SpriteRenderer sprite;
 
     private bool moviendoDerecha = true;
+    private Vida jugadorEnContacto;
+    private float timerDaño;
 
-    void Update()
+    private void Awake()
     {
-        if (moviendoDerecha)
-        {
-            transform.position = Vector2.MoveTowards(
-                transform.position,
-                puntoDerecha.position,
-                velocidad * Time.deltaTime
-            );
+        if (sprite == null)
+            sprite = GetComponent<SpriteRenderer>();
+    }
 
-            if (transform.position.x >= puntoDerecha.position.x)
-            {
-                moviendoDerecha = false;
-                Girar();
-            }
+    private void Start()
+    {
+        if (puntoIzquierda == null || puntoDerecha == null)
+        {
+            Debug.LogError($"{name}: Faltan los puntos de patrulla.");
+            enabled = false;
         }
+    }
+
+    private void FixedUpdate()
+    {
+        Patrullar();
+    }
+
+    private void Update()
+    {
+        if (jugadorEnContacto == null)
+            return;
+
+        timerDaño -= Time.deltaTime;
+
+        if (timerDaño <= 0f)
+        {
+            jugadorEnContacto.RecibirDaño(daño);
+            timerDaño = tiempoEntreGolpes;
+        }
+    }
+
+    private void Patrullar()
+    {
+        Transform destino = moviendoDerecha ? puntoDerecha : puntoIzquierda;
+
+        transform.position = Vector2.MoveTowards(
+            transform.position,
+            destino.position,
+            velocidad * Time.fixedDeltaTime);
+
+        if (Vector2.Distance(transform.position, destino.position) < 0.05f)
+        {
+            moviendoDerecha = !moviendoDerecha;
+            Girar();
+        }
+    }
+
+    private void Girar()
+    {
+        if (sprite != null)
+            sprite.flipX = !sprite.flipX;
         else
         {
-            transform.position = Vector2.MoveTowards(
-                transform.position,
-                puntoIzquierda.position,
-                velocidad * Time.deltaTime
-            );
-
-            if (transform.position.x <= puntoIzquierda.position.x)
-            {
-                moviendoDerecha = true;
-                Girar();
-            }
+            Vector3 escala = transform.localScale;
+            escala.x *= -1;
+            transform.localScale = escala;
         }
     }
 
-    void Girar()
+    private void OnTriggerEnter2D(Collider2D other)
     {
-        Vector3 escala = transform.localScale;
-        escala.x *= -1;
-        transform.localScale = escala;
+        if (!other.CompareTag("Player"))
+            return;
+
+        jugadorEnContacto = other.GetComponent<Vida>();
+
+        if (jugadorEnContacto != null)
+        {
+            jugadorEnContacto.RecibirDaño(daño);
+            timerDaño = tiempoEntreGolpes;
+        }
     }
 
-    void OnTriggerEnter2D(Collider2D other)
+    private void OnTriggerExit2D(Collider2D other)
     {
-        if (other.CompareTag("Player"))
-        {
-            jugador j = other.GetComponent<jugador>();
+        if (!other.CompareTag("Player"))
+            return;
 
-            if (j != null)
-            {
-                j.RecibirDaño(daño);
-            }
+        if (other.GetComponent<Vida>() == jugadorEnContacto)
+            jugadorEnContacto = null;
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (puntoIzquierda != null && puntoDerecha != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawLine(puntoIzquierda.position, puntoDerecha.position);
+            Gizmos.DrawSphere(puntoIzquierda.position, 0.1f);
+            Gizmos.DrawSphere(puntoDerecha.position, 0.1f);
         }
     }
 }
