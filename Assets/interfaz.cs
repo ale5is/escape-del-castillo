@@ -9,16 +9,46 @@ public class interfaz : MonoBehaviour
     public TMP_Text tiempoTexto;
     public TMP_Text puntajeTexto;
 
+    void Start()
+    {
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.RestaurarInterfaz(out tiempo, out puntaje);
+        }
+
+        ActualizarUI();
+    }
+
     void Update()
     {
         tiempo += Time.deltaTime;
-        tiempoTexto.text = "Tiempo: " + Mathf.FloorToInt(tiempo);
 
-        puntajeTexto.text = "Puntaje: " + puntaje;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.GuardarInterfaz(tiempo, puntaje);
+        }
+
+        ActualizarUI();
     }
 
     public void SumarPuntos(int puntos)
     {
         puntaje += puntos;
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.GuardarInterfaz(tiempo, puntaje);
+        }
+
+        ActualizarUI();
+    }
+
+    private void ActualizarUI()
+    {
+        if (tiempoTexto != null)
+            tiempoTexto.text = "Tiempo: " + Mathf.FloorToInt(tiempo);
+
+        if (puntajeTexto != null)
+            puntajeTexto.text = "Puntaje: " + puntaje;
     }
 }
